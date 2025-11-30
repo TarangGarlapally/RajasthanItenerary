@@ -1,0 +1,592 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rajasthan Itinerary Planner</title>
+    
+    <!-- React & ReactDOM -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    
+    <!-- Babel for JSX -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <style>
+        /* Hide scrollbar for Chrome, Safari and Opera */
+        .hide-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        /* Hide scrollbar for IE, Edge and Firefox */
+        .hide-scrollbar {
+            -ms-overflow-style: none;  /* IE and Edge */
+            scrollbar-width: none;  /* Firefox */
+        }
+    </style>
+</head>
+<body class="bg-stone-50">
+    <div id="root"></div>
+
+    <script type="text/babel">
+        // --- Icon Components (Inline SVGs to replace lucide-react dependency) ---
+        const IconBase = ({ children, className = "" }) => (
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+                {children}
+            </svg>
+        );
+
+        const Calendar = (props) => <IconBase {...props}><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/></IconBase>;
+        const MapPin = (props) => <IconBase {...props}><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></IconBase>;
+        const Sun = (props) => <IconBase {...props}><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></IconBase>;
+        const Moon = (props) => <IconBase {...props}><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></IconBase>;
+        const Coffee = (props) => <IconBase {...props}><path d="M17 8h1a4 4 0 1 1 0 8h-1"/><path d="M3 8h14v9a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4Z"/><line x1="6" x2="6" y1="2" y2="4"/><line x1="10" x2="10" y1="2" y2="4"/><line x1="14" x2="14" y1="2" y2="4"/></IconBase>;
+        const Camera = (props) => <IconBase {...props}><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/></IconBase>;
+        const Compass = (props) => <IconBase {...props}><circle cx="12" cy="12" r="10"/><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"/></IconBase>;
+        const MapIcon = (props) => <IconBase {...props}><polygon points="3 6 9 3 15 6 21 3 21 18 15 21 9 18 3 21"/><line x1="9" x2="9" y1="3" y2="21"/><line x1="15" x2="15" y1="3" y2="21"/></IconBase>;
+        const CheckSquare = (props) => <IconBase {...props}><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></IconBase>;
+        const Clock = (props) => <IconBase {...props}><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></IconBase>;
+        const Users = (props) => <IconBase {...props}><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></IconBase>;
+        const ArrowRight = (props) => <IconBase {...props}><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></IconBase>;
+        const Wind = (props) => <IconBase {...props}><path d="M17.7 7.7a2.5 2.5 0 1 1 1.8 4.3H2"/><path d="M9.6 4.6A2 2 0 1 1 11 8H2"/><path d="M12.6 19.4A2 2 0 1 0 14 16H2"/></IconBase>;
+        const AlertTriangle = (props) => <IconBase {...props}><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" x2="12" y1="9" y2="13"/><line x1="12" x2="12.01" y1="17" y2="17"/></IconBase>;
+
+
+        // --- Main Component ---
+        const RajasthanItinerary = () => {
+            const [activeTab, setActiveTab] = React.useState('itinerary');
+            const [selectedDay, setSelectedDay] = React.useState(0);
+            const [pace, setPace] = React.useState('relaxed'); // 'relaxed' or 'grand_tour'
+
+            // December Weather Context
+            const weather = {
+                day: "22°C - 26°C (Pleasant)",
+                night: "7°C - 12°C (Chilly)",
+                desc: "Sunny days, cold desert nights. Ideal for sightseeing."
+            };
+
+            // Itinerary Data - Two Variations
+            const itineraries = {
+                relaxed: [
+                {
+                    day: 1,
+                    date: "Dec 19",
+                    city: "Jaipur",
+                    title: "Late Night Arrival",
+                    icon: <MapPin className="text-pink-500" />,
+                    activities: [
+                    { time: "Night", text: "Land in Jaipur. Airport transfer to hotel." },
+                    { time: "Check-in", text: "Straight to bed at a Haveli (e.g., Samode Haveli/Narain Niwas) to be fresh for tomorrow." }
+                    ]
+                },
+                {
+                    day: 2,
+                    date: "Dec 20",
+                    city: "Jaipur",
+                    title: "The Pink City Full Day",
+                    icon: <Camera className="text-pink-500" />,
+                    activities: [
+                    { time: "8:30 AM", text: "Amber Fort. Go early to beat the crowds. Take the jeep up if tired." },
+                    { time: "11:30 AM", text: "Quick photo stop at Jal Mahal (Water Palace)." },
+                    { time: "1:00 PM", text: "Lunch at Town Coffee or Tattoo Cafe (view of Hawa Mahal)." },
+                    { time: "3:00 PM", text: "City Palace & Jantar Mantar." },
+                    { time: "7:00 PM", text: "Dinner at Bar Palladio. Iconic blue interiors, perfect for a relaxed evening." }
+                    ]
+                },
+                {
+                    day: 3,
+                    date: "Dec 21",
+                    city: "Travel -> Jodhpur",
+                    title: "Drive to Blue City",
+                    icon: <Compass className="text-blue-500" />,
+                    activities: [
+                    { time: "9:00 AM", text: "Depart for Jodhpur (approx. 6 hours drive)." },
+                    { time: "1:00 PM", text: "Lunch midway at a resort on the highway." },
+                    { time: "4:00 PM", text: "Arrive Jodhpur. Check into hotel (e.g., RAAS, Pal Haveli)." },
+                    { time: "Sunset", text: "Rooftop drinks with a view of the illuminated Mehrangarh Fort." }
+                    ]
+                },
+                {
+                    day: 4,
+                    date: "Dec 22",
+                    city: "Jodhpur",
+                    title: "Forts & Stepwells",
+                    icon: <MapIcon className="text-blue-500" />,
+                    activities: [
+                    { time: "9:30 AM", text: "Mehrangarh Fort. Take the audio guide." },
+                    { time: "12:00 PM", text: "Walk down to the Blue City streets." },
+                    { time: "1:30 PM", text: "Lunch at Stepwell Cafe overlooking Toorji Ka Jhalra." },
+                    { time: "4:00 PM", text: "Rao Jodha Desert Rock Park. Very peaceful nature walk right next to the fort." }
+                    ]
+                },
+                {
+                    day: 5,
+                    date: "Dec 23",
+                    city: "Travel -> Udaipur",
+                    title: "The Ranakpur Route",
+                    icon: <Compass className="text-purple-500" />,
+                    activities: [
+                    { time: "8:30 AM", text: "Depart for Udaipur (approx. 5.5 hours)." },
+                    { time: "11:00 AM", text: "Stop at Ranakpur Jain Temple. 1444 unique marble pillars." },
+                    { time: "1:00 PM", text: "Lunch at King's Abode, Ranakpur." },
+                    { time: "4:30 PM", text: "Arrive Udaipur. Stay near Lake Pichola." }
+                    ]
+                },
+                {
+                    day: 6,
+                    date: "Dec 24",
+                    city: "Udaipur",
+                    title: "Lakeside Christmas Eve",
+                    icon: <Wind className="text-purple-500" />,
+                    activities: [
+                    { time: "Morning", text: "City Palace. Explore the Mor Chowk and crystal gallery." },
+                    { time: "12:00 PM", text: "Boat ride to Jagmandir Island." },
+                    { time: "Afternoon", text: "Leisure time for shopping in the Old City." },
+                    { time: "Evening", text: "Special Christmas Eve Dinner (Book lakeside tables in advance!)." }
+                    ]
+                },
+                {
+                    day: 7,
+                    date: "Dec 25",
+                    city: "Udaipur",
+                    title: "Monsoon Palace",
+                    icon: <Sun className="text-purple-500" />,
+                    activities: [
+                    { time: "Late Start", text: "Slow breakfast. Merry Christmas!" },
+                    { time: "11:00 AM", text: "Saheliyon Ki Bari (Garden of Maidens)." },
+                    { time: "4:30 PM", text: "Drive to Monsoon Palace (Sajjangarh) for sunset." },
+                    { time: "7:00 PM", text: "Dharohar Folk Dance show at Bagore Ki Haveli." }
+                    ]
+                },
+                {
+                    day: 8,
+                    date: "Dec 26",
+                    city: "Udaipur",
+                    title: "Final Relaxation",
+                    icon: <Coffee className="text-purple-500" />,
+                    activities: [
+                    { time: "Morning", text: "Optional: Cooking class or Vintage Car Museum." },
+                    { time: "Afternoon", text: "Last minute shopping at Hathi Pol." },
+                    { time: "Evening", text: "Farewell Dinner at 1559 AD." }
+                    ]
+                },
+                {
+                    day: 9,
+                    date: "Dec 27",
+                    city: "Departure",
+                    title: "Fly Out",
+                    icon: <ArrowRight className="text-gray-500" />,
+                    activities: [
+                    { time: "Morning", text: "Transfer to Udaipur Airport (UDR)." }
+                    ]
+                }
+                ],
+                grand_tour: [
+                { 
+                    day: 1, 
+                    date: "Dec 19", 
+                    city: "Jaipur", 
+                    title: "Late Night Arrival", 
+                    icon: <MapPin className="text-pink-500"/>, 
+                    activities: [
+                    {time:"Night", text:"Land in Jaipur. Direct transfer to hotel. Sleep immediately to save energy for the busy week."}
+                    ] 
+                },
+                { 
+                    day: 2, 
+                    date: "Dec 20", 
+                    city: "Jaipur", 
+                    title: "Pink City Blitz", 
+                    icon: <Camera className="text-pink-500"/>, 
+                    activities: [
+                    {time:"8:00 AM", text:"Amber Fort (Main highlight)."}, 
+                    {time:"12:00 PM", text:"City Palace & Hawa Mahal (Photo stop only)."},
+                    {time:"4:00 PM", text:"Nahargarh Fort for sunset views."},
+                    {time:"Evening", text:"Dinner and early sleep."}
+                    ] 
+                },
+                { 
+                    day: 3, 
+                    date: "Dec 21", 
+                    city: "Jaipur -> Jodhpur", 
+                    title: "Drive to Blue City", 
+                    icon: <Compass className="text-blue-500"/>, 
+                    activities: [
+                    {time:"8:00 AM", text:"Drive to Jodhpur (6 hours)."}, 
+                    {time:"2:00 PM", text:"Arrive Jodhpur. Lunch."},
+                    {time:"4:30 PM", text:"Rao Jodha Rock Park (Sunset nature walk)."},
+                    {time:"Night", text:"Dinner at Indique (View of Fort)."}
+                    ] 
+                },
+                { 
+                    day: 4, 
+                    date: "Dec 22", 
+                    city: "Jodhpur", 
+                    title: "The Majestic Fort", 
+                    icon: <MapIcon className="text-blue-500"/>, 
+                    activities: [
+                    {time:"9:00 AM", text:"Mehrangarh Fort (Allow 2-3 hours)."}, 
+                    {time:"12:30 PM", text:"Quick walk through Blue City streets."},
+                    {time:"2:30 PM", text:"Start Drive to Jaisalmer (5 hours)."},
+                    {time:"7:30 PM", text:"Arrive Jaisalmer. Relax."}
+                    ] 
+                },
+                { 
+                    day: 5, 
+                    date: "Dec 23", 
+                    city: "Jaisalmer", 
+                    title: "Golden Fort & Havelis", 
+                    icon: <Sun className="text-yellow-600"/>, 
+                    activities: [
+                    {time:"AM", text:"Jaisalmer Fort (The only living fort). Jain Temples inside."}, 
+                    {time:"PM", text:"Patwon Ki Haveli."},
+                    {time:"Sunset", text:"Boating at Gadisar Lake."}
+                    ] 
+                },
+                { 
+                    day: 6, 
+                    date: "Dec 24", 
+                    city: "Jaisalmer", 
+                    title: "Christmas Eve in Dunes", 
+                    icon: <Wind className="text-yellow-600"/>, 
+                    activities: [
+                    {time:"Morning", text:"Relaxed morning/Kuldhara Abandoned Village."}, 
+                    {time:"3:00 PM", text:"Head to Sam Sand Dunes."},
+                    {time:"Evening", text:"Camel Safari at sunset. Folk music & bonfire dinner at camp."},
+                    {time:"Night", text:"Stay in luxury tents."}
+                    ] 
+                },
+                { 
+                    day: 7, 
+                    date: "Dec 25", 
+                    city: "Travel -> Udaipur", 
+                    title: "The Big Drive (Christmas)", 
+                    icon: <AlertTriangle className="text-red-500"/>, 
+                    activities: [
+                    {time:"7:00 AM", text:"Depart EARLY. This is a 9-10 hour drive (500km)."}, 
+                    {time:"Lunch", text:"Stop at Barmer or Jodhpur bypass."},
+                    {time:"Evening", text:"Arrive Udaipur exhausted. Easy dinner at hotel."}
+                    ] 
+                },
+                { 
+                    day: 8, 
+                    date: "Dec 26", 
+                    city: "Udaipur", 
+                    title: "Lake City Charm", 
+                    icon: <Users className="text-purple-500"/>, 
+                    activities: [
+                    {time:"Morning", text:"City Palace & Jagdish Temple."}, 
+                    {time:"Afternoon", text:"Lake Pichola Boat Ride."},
+                    {time:"Evening", text:"Farewell Dinner at Ambrai."}
+                    ] 
+                },
+                { 
+                    day: 9, 
+                    date: "Dec 27", 
+                    city: "Departure", 
+                    title: "Fly out of Udaipur", 
+                    icon: <ArrowRight className="text-gray-500"/>, 
+                    activities: [
+                    {time:"Morning", text:"Airport Transfer."}
+                    ] 
+                }
+                ]
+            };
+
+            const packingList = [
+                { item: "Warm Layers", detail: "Fleece/Jackets for nights (8-10°C)" },
+                { item: "Comfortable Shoes", detail: "Lots of walking in forts (cobblestones)" },
+                { item: "Sun Protection", detail: "Hat/Sunglasses (Sunny days)" },
+                { item: "Moisturizer", detail: "The air is very dry in Dec" },
+                { item: "Power Bank", detail: "Long travel days" },
+                { item: "Scarf/Shawl", detail: "Versatile for cold & temples" }
+            ];
+
+            const currentItinerary = itineraries[pace];
+
+            return (
+                <div className="bg-stone-50 min-h-screen font-sans text-stone-800 pb-10">
+                
+                {/* Header */}
+                <div className="bg-emerald-900 text-amber-50 p-6 shadow-lg">
+                    <div className="max-w-3xl mx-auto">
+                    <div className="flex justify-between items-start">
+                        <div>
+                        <h1 className="text-2xl md:text-3xl font-serif font-bold mb-2">Rajasthan Getaway</h1>
+                        <p className="opacity-90 flex items-center gap-2">
+                            <Calendar size={18} /> Dec 19 - Dec 27 (9 Days)
+                            <span className="mx-2">|</span>
+                            <Users size={18} /> 5 Friends
+                        </p>
+                        </div>
+                        <div className="hidden md:block text-right">
+                        <div className="text-sm opacity-75">Current Forecast</div>
+                        <div className="font-bold text-xl">Sunny & Cool</div>
+                        </div>
+                    </div>
+
+                    {/* Pace Toggle */}
+                    <div className="mt-6 flex bg-emerald-800 rounded-lg p-1 w-full md:w-fit">
+                        <button 
+                        onClick={() => { setPace('relaxed'); setSelectedDay(0); }}
+                        className={`flex-1 md:flex-none px-4 py-2 rounded-md text-sm font-medium transition-all ${pace === 'relaxed' ? 'bg-amber-100 text-emerald-900 shadow-sm' : 'text-emerald-100 hover:bg-emerald-700'}`}
+                        >
+                        Relaxed (3 Cities)
+                        <span className="block text-xs opacity-70 font-normal">Misses Jaisalmer</span>
+                        </button>
+                        <button 
+                        onClick={() => { setPace('grand_tour'); setSelectedDay(0); }}
+                        className={`flex-1 md:flex-none px-4 py-2 rounded-md text-sm font-medium transition-all ${pace === 'grand_tour' ? 'bg-amber-100 text-emerald-900 shadow-sm' : 'text-emerald-100 hover:bg-emerald-700'}`}
+                        >
+                        The Grand Tour (4 Cities)
+                        <span className="block text-xs opacity-70 font-normal">High Pace • Long Drives</span>
+                        </button>
+                    </div>
+                    </div>
+                </div>
+
+                <div className="max-w-3xl mx-auto px-4 mt-6">
+                    
+                    {/* Navigation Tabs */}
+                    <div className="flex border-b border-stone-300 mb-6 overflow-x-auto">
+                    <button 
+                        onClick={() => setActiveTab('itinerary')} 
+                        className={`pb-3 px-4 text-sm font-semibold whitespace-nowrap ${activeTab === 'itinerary' ? 'border-b-2 border-emerald-800 text-emerald-900' : 'text-stone-500'}`}
+                    >
+                        Daily Itinerary
+                    </button>
+                    <button 
+                        onClick={() => setActiveTab('essentials')} 
+                        className={`pb-3 px-4 text-sm font-semibold whitespace-nowrap ${activeTab === 'essentials' ? 'border-b-2 border-emerald-800 text-emerald-900' : 'text-stone-500'}`}
+                    >
+                        Essentials & Packing
+                    </button>
+                    <button 
+                        onClick={() => setActiveTab('map')} 
+                        className={`pb-3 px-4 text-sm font-semibold whitespace-nowrap ${activeTab === 'map' ? 'border-b-2 border-emerald-800 text-emerald-900' : 'text-stone-500'}`}
+                    >
+                        Route Map
+                    </button>
+                    </div>
+
+                    {/* Content Area */}
+                    {activeTab === 'itinerary' && (
+                    <div className="grid md:grid-cols-3 gap-6">
+                        
+                        {/* Days List (Sidebar on Desktop, Top Scroll on Mobile) */}
+                        <div className="md:col-span-1 flex md:flex-col overflow-x-auto md:overflow-visible gap-2 pb-2 md:pb-0 hide-scrollbar">
+                        {currentItinerary.map((item, index) => (
+                            <button
+                            key={index}
+                            onClick={() => setSelectedDay(index)}
+                            className={`flex-shrink-0 md:w-full text-left p-3 rounded-lg border transition-all ${
+                                selectedDay === index 
+                                ? 'bg-white border-emerald-600 ring-1 ring-emerald-600 shadow-md' 
+                                : 'bg-white border-stone-200 hover:bg-stone-100'
+                            }`}
+                            >
+                            <div className="text-xs font-bold text-stone-400 uppercase tracking-wide">{item.date}</div>
+                            <div className="font-bold text-stone-800">{item.city}</div>
+                            <div className="text-xs text-stone-500 truncate">{item.title}</div>
+                            </button>
+                        ))}
+                        </div>
+
+                        {/* Day Details */}
+                        <div className="md:col-span-2">
+                        <div className="bg-white rounded-xl shadow-sm border border-stone-200 overflow-hidden">
+                            <div className="p-6 border-b border-stone-100 bg-amber-50/50">
+                            <div className="flex items-center gap-3 mb-1">
+                                <span className="bg-emerald-100 text-emerald-800 text-xs font-bold px-2 py-1 rounded">
+                                Day {currentItinerary[selectedDay].day}
+                                </span>
+                                <span className="text-stone-500 text-sm font-medium">{currentItinerary[selectedDay].date}</span>
+                            </div>
+                            <h2 className="text-2xl font-serif font-bold text-stone-800 mb-1">
+                                {currentItinerary[selectedDay].title}
+                            </h2>
+                            <div className="flex items-center gap-2 text-stone-600 text-sm">
+                                {currentItinerary[selectedDay].icon}
+                                {currentItinerary[selectedDay].city}
+                            </div>
+                            </div>
+
+                            <div className="p-6">
+                            <div className="space-y-6 relative">
+                                {/* Vertical Line */}
+                                <div className="absolute left-[19px] top-2 bottom-2 w-0.5 bg-stone-200"></div>
+
+                                {currentItinerary[selectedDay].activities.map((activity, idx) => (
+                                <div key={idx} className="relative pl-10">
+                                    <div className="absolute left-0 top-1 w-10 flex justify-center">
+                                    <div className="w-2.5 h-2.5 rounded-full bg-emerald-600 ring-4 ring-white"></div>
+                                    </div>
+                                    <div>
+                                    <span className="block text-xs font-bold text-emerald-700 uppercase tracking-wide mb-0.5">
+                                        {activity.time}
+                                    </span>
+                                    <p className="text-stone-700 leading-relaxed">
+                                        {activity.text}
+                                    </p>
+                                    </div>
+                                </div>
+                                ))}
+                            </div>
+
+                            {/* Suggestion Box */}
+                            <div className="mt-8 bg-blue-50 p-4 rounded-lg border border-blue-100 text-sm text-blue-800 flex items-start gap-3">
+                                <Coffee size={18} className="mt-0.5 flex-shrink-0" />
+                                <div>
+                                <span className="font-bold block mb-1">Peaceful Tip:</span>
+                                {pace === 'grand_tour' && currentItinerary[selectedDay].day === 7 
+                                    ? "This is the hardest day. Download music/podcasts offline for the drive. No major stops except lunch."
+                                    : "December is peak season. Book restaurant tables for dinner in advance. Ask for 'outdoor heaters' (sigris) if dining on rooftops."}
+                                </div>
+                            </div>
+                            </div>
+                        </div>
+                        </div>
+                    </div>
+                    )}
+
+                    {activeTab === 'essentials' && (
+                    <div className="bg-white rounded-xl shadow-sm border border-stone-200 p-6">
+                        <h2 className="text-xl font-bold mb-4 font-serif">Trip Essentials</h2>
+                        
+                        <div className="grid md:grid-cols-2 gap-8">
+                        <div>
+                            <h3 className="flex items-center gap-2 font-bold text-stone-700 mb-3">
+                            <Sun size={18} /> Weather Expectation
+                            </h3>
+                            <div className="bg-stone-50 p-4 rounded-lg border border-stone-200 text-sm">
+                            <div className="flex justify-between mb-2">
+                                <span className="text-stone-500">Daytime</span>
+                                <span className="font-bold">{weather.day}</span>
+                            </div>
+                            <div className="flex justify-between mb-2">
+                                <span className="text-stone-500">Nighttime</span>
+                                <span className="font-bold">{weather.night}</span>
+                            </div>
+                            <p className="text-stone-600 mt-2 italic border-t border-stone-200 pt-2">
+                                {weather.desc}
+                            </p>
+                            </div>
+
+                            <h3 className="flex items-center gap-2 font-bold text-stone-700 mb-3 mt-6">
+                            <CheckSquare size={18} /> Packing Checklist
+                            </h3>
+                            <ul className="space-y-2">
+                            {packingList.map((item, i) => (
+                                <li key={i} className="flex items-center gap-3 text-sm p-2 hover:bg-stone-50 rounded">
+                                <div className="w-5 h-5 rounded border border-stone-300 flex items-center justify-center text-emerald-600">
+                                    ✓
+                                </div>
+                                <div>
+                                    <span className="font-semibold text-stone-800 block">{item.item}</span>
+                                    <span className="text-stone-500 text-xs">{item.detail}</span>
+                                </div>
+                                </li>
+                            ))}
+                            </ul>
+                        </div>
+
+                        <div>
+                            <h3 className="flex items-center gap-2 font-bold text-stone-700 mb-3">
+                            <Clock size={18} /> Travel Distances
+                            </h3>
+                            <div className="space-y-3">
+                            <div className="flex items-center justify-between p-3 border border-stone-100 rounded-lg shadow-sm">
+                                <span className="text-sm font-medium">Jaipur ➝ Jodhpur</span>
+                                <span className="text-xs bg-stone-100 px-2 py-1 rounded">~6 Hours (350 km)</span>
+                            </div>
+                            <div className="flex items-center justify-between p-3 border border-stone-100 rounded-lg shadow-sm">
+                                <span className="text-sm font-medium">Jodhpur ➝ Jaisalmer</span>
+                                <span className="text-xs bg-stone-100 px-2 py-1 rounded">~5 Hours (280 km)</span>
+                            </div>
+                            <div className="flex items-center justify-between p-3 border border-stone-100 rounded-lg shadow-sm">
+                                <span className="text-sm font-medium">Jodhpur ➝ Udaipur</span>
+                                <span className="text-xs bg-stone-100 px-2 py-1 rounded">~5.5 Hours (250 km)</span>
+                            </div>
+                            <div className="flex items-center justify-between p-3 border border-stone-100 rounded-lg shadow-sm bg-red-50">
+                                <span className="text-sm font-medium text-red-800">Jaisalmer ➝ Udaipur</span>
+                                <span className="text-xs bg-white px-2 py-1 rounded border border-red-100">~9-10 Hours (500 km)</span>
+                            </div>
+                            </div>
+                            <p className="text-xs text-stone-500 mt-2">
+                            *Times are estimates by car including one short tea break. Traffic in cities can add time.
+                            </p>
+
+                            <div className="mt-6 bg-amber-50 p-4 rounded-lg border border-amber-100 text-sm">
+                                <h4 className="font-bold text-amber-900 mb-1">Group Travel Tip</h4>
+                                <p className="text-amber-800">
+                                Hire a single tempo traveler (van) for the whole trip. It's more fun for 5 friends than two cars and allows for card games and naps during the long drives.
+                                </p>
+                            </div>
+                        </div>
+                        </div>
+                    </div>
+                    )}
+
+                    {activeTab === 'map' && (
+                    <div className="bg-white rounded-xl shadow-sm border border-stone-200 p-6 flex flex-col items-center justify-center min-h-[400px]">
+                        <div className="relative w-full max-w-md aspect-[3/4] bg-stone-100 rounded-full border-4 border-stone-200 flex flex-col items-center p-8">
+                            {/* Abstract Map Representation */}
+                            <div className="absolute top-10 text-center">
+                            <div className={`w-4 h-4 rounded-full mx-auto mb-1 ${pace === 'relaxed' ? 'bg-pink-500' : 'bg-pink-500'}`}></div>
+                            <span className="font-bold text-stone-700">Jaipur</span>
+                            <div className="text-xs text-stone-500">Start</div>
+                            </div>
+
+                            <div className={`absolute left-8 top-1/2 -translate-y-1/2 text-center ${pace === 'relaxed' ? 'opacity-30' : 'opacity-100'}`}>
+                            <div className="w-4 h-4 rounded-full bg-yellow-500 mx-auto mb-1"></div>
+                            <span className="font-bold text-stone-700">Jaisalmer</span>
+                            <div className="text-xs text-stone-500">Desert</div>
+                            </div>
+
+                            <div className="absolute right-12 top-1/3 text-center">
+                            <div className="w-4 h-4 rounded-full bg-blue-500 mx-auto mb-1"></div>
+                            <span className="font-bold text-stone-700">Jodhpur</span>
+                            <div className="text-xs text-stone-500">Mid</div>
+                            </div>
+
+                            <div className="absolute bottom-16 text-center">
+                            <div className="w-4 h-4 rounded-full bg-purple-500 mx-auto mb-1"></div>
+                            <span className="font-bold text-stone-700">Udaipur</span>
+                            <div className="text-xs text-stone-500">End</div>
+                            </div>
+                            
+                            {/* Connection Lines (Simulated) */}
+                            <svg className="absolute inset-0 w-full h-full pointer-events-none opacity-20">
+                            <path d="M220 60 L 300 140" stroke="black" strokeWidth="2" strokeDasharray="5,5" />
+                            {pace === 'grand_tour' && (
+                                <g>
+                                <path d="M300 160 L 80 200" stroke="black" strokeWidth="2" strokeDasharray="5,5" />
+                                <path d="M80 220 L 220 320" stroke="black" strokeWidth="2" strokeDasharray="5,5" />
+                                </g>
+                            )}
+                            {pace === 'relaxed' && (
+                                <path d="M300 160 L 220 320" stroke="black" strokeWidth="2" strokeDasharray="5,5" />
+                            )}
+                            </svg>
+
+                            <div className="mt-auto text-center text-sm text-stone-500 bg-white/80 p-2 rounded backdrop-blur-sm">
+                            {pace === 'relaxed' 
+                                ? "Route: Jaipur -> Jodhpur -> Udaipur" 
+                                : "Route: Jaipur -> Jodhpur -> Jaisalmer -> Udaipur"}
+                            </div>
+                        </div>
+                    </div>
+                    )}
+
+                </div>
+                </div>
+            );
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<RajasthanItinerary />);
+    </script>
+</body>
+</html>
